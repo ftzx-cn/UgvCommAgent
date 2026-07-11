@@ -29,6 +29,16 @@ void ConfigModel::buildPropertyBinding() {
     }
 }
 
+void ConfigModel::updateSourceProperty(QtVariantProperty *property, const QVariant &value) const {
+    if (!m_configSource) {
+        return;
+    }
+    if (isValidItem(property, property->value())) {
+        m_configSource->setProperty(m_propertyToName.value(property).toStdString().data(), property->value());
+        property->setModified(false);
+    }
+}
+
 QtVariantProperty *ConfigModel::createProperty(const QString &srcPropName, const nlohmann::json &propInfo) {
     if (!m_propertyManager) {
         return nullptr;

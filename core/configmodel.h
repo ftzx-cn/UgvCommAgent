@@ -11,13 +11,13 @@
 
 #include "configsource.h"
 
+#include <QLineEdit>
 #include <QMap>
 #include <QMetaType>
 #include <QObject>
+#include <QPointer>
 #include <QRegularExpression>
 #include <QTreeView>
-#include <QLineEdit>
-#include <QPointer>
 
 class ConfigModel : public QObject {
     Q_OBJECT
@@ -27,7 +27,7 @@ class ConfigModel : public QObject {
     ~ConfigModel() override = default;
 
     void setPorpertyManager(QtVariantPropertyManager *propertyManger) { m_propertyManager = propertyManger; }
-    void setConfigSource(ConfigSource *configSource) { m_configSource =configSource; }
+    void setConfigSource(ConfigSource *configSource) { m_configSource = configSource; }
 
     void buildPropertyBinding();
 
@@ -39,11 +39,13 @@ class ConfigModel : public QObject {
     void onSrcValueChanged(const QString &propName, const QVariant &propValue) const;
 
     QList<QtVariantProperty *> properties() { return m_propertyList; }
+
+    void updateSourceProperty(QtVariantProperty *property, const QVariant &value) const;
+
   signals:
 
   private:
     QtVariantProperty *createProperty(const QString &srcPropName, const nlohmann::json &propInfo);
-
     QtVariantProperty *groupPropertyByPath(const QString &groupName);
     static bool isValidItem(const QtVariantProperty *property, const QVariant &value);
 

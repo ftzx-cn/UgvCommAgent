@@ -143,26 +143,29 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
     }
 
     // 添加修改设置按钮
-    const auto settingButtonsContainer = new QFrame(configContainer);
-    const auto settingButtonsLayout = new QHBoxLayout(settingButtonsContainer);
-    settingButtonsLayout->setAlignment(Qt::AlignRight);
-    settingButtonsLayout->setContentsMargins(0, 0, 0, 0);
-    settingButtonsLayout->setSpacing(6);
-    const auto saveButton = new QPushButton(tr("应用"), settingButtonsContainer);
-    const auto loadButton = new QPushButton(tr("恢复"), settingButtonsContainer);
-    settingButtonsLayout->addStretch();
-    settingButtonsLayout->addWidget(saveButton);
-    settingButtonsLayout->addWidget(loadButton);
-    configContainerLayout->addWidget(settingButtonsContainer);
+    // const auto settingButtonsContainer = new QFrame(configContainer);
+    // const auto settingButtonsLayout = new QHBoxLayout(settingButtonsContainer);
+    // settingButtonsLayout->setAlignment(Qt::AlignRight);
+    // settingButtonsLayout->setContentsMargins(0, 0, 0, 0);
+    // settingButtonsLayout->setSpacing(6);
+    // const auto saveButton = new QPushButton(tr("应用"), settingButtonsContainer);
+    // const auto loadButton = new QPushButton(tr("恢复"), settingButtonsContainer);
+    // settingButtonsLayout->addStretch();
+    // settingButtonsLayout->addWidget(saveButton);
+    // settingButtonsLayout->addWidget(loadButton);
+    // configContainerLayout->addWidget(settingButtonsContainer);
 
     rootLayout->addWidget(configContainer);
 
-    connect(saveButton, &QPushButton::clicked, m_configModel, &ConfigModel::savePropetyItems);
-    connect(loadButton, &QPushButton::clicked, m_configModel, &ConfigModel::loadPropetyItems);
+    // connect(saveButton, &QPushButton::clicked, m_configModel, &ConfigModel::savePropetyItems);
+    // connect(loadButton, &QPushButton::clicked, m_configModel, &ConfigModel::loadPropetyItems);
 
     connect(m_propertyManager, &QtVariantPropertyManager::valueChanged,
-            [this](QtProperty *prop, const QVariant &variant) {
+            [this](QtProperty *prop, const QVariant &value) {
                 const auto property = dynamic_cast<QtVariantProperty *>(prop);
+                if (property) {
+                    m_configModel->updateSourceProperty(property, value);
+                }
                 if (property && m_configModel->equalValues(property)) {
                     prop->setModified(false);
                 } else {
@@ -173,15 +176,16 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
     connect(m_saveAction, &QAction::triggered, [this]() { m_configSource->saveToFile(); });
 
     // 启动PLC连接
-    connect(m_connectAction, &QAction::triggered, [this, saveButton, loadButton]() {
+    connect(m_connectAction, &QAction::triggered, [this]() {
         if (!m_connectAction->isEnabled() && m_disconnectAction->isEnabled()) {
             return;
         }
         m_connectAction->setEnabled(false);
         m_disconnectAction->setEnabled(true);
-        saveButton->setEnabled(false);
-        loadButton->setEnabled(false);
-        setPropertiesEnabled(false);
+        // saveButton->setEnabled(false);
+        // loadButton->setEnabled(false);
+        setPropertiesEnabled("PLC连接配置", false);
+        setPropertiesEnabled("设备监控配置", false);
 
         setPlcConnectionParameter();
         setReadTasks();
@@ -210,7 +214,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
         emit m_tcpClient->stateChanged(m_tcpClient->state());
     });
     // 断开PLC连接
-    connect(m_disconnectAction, &QAction::triggered, [this, saveButton, loadButton]() {
+    connect(m_disconnectAction, &QAction::triggered, [this]() {
         if (m_connectAction->isEnabled() && !m_disconnectAction->isEnabled()) {
             return;
         }
@@ -221,9 +225,10 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
 
         m_connectAction->setEnabled(true);
         m_disconnectAction->setEnabled(false);
-        saveButton->setEnabled(true);
-        loadButton->setEnabled(true);
-        setPropertiesEnabled(true);
+        // saveButton->setEnabled(true);
+        // loadButton->setEnabled(true);
+        setPropertiesEnabled("PLC连接配置", true);
+        setPropertiesEnabled("设备监控配置", true);
 
         emit m_tcpClient->stateChanged(m_tcpClient->state());
     });
@@ -497,9 +502,10 @@ void MainWindow::handleModbusMessageReceived(quint64 requestId, const QModbusDat
             break;
     }
 }
-void MainWindow::setPropertiesEnabled(const bool enabled) const {
+void MainWindow::setPropertiesEnabled(const QString &propertyGroupName, const bool enabled) const {
     for (const auto &property : m_configModel->properties()) {
-        if (!property->parentProperty()) {
+        if (!property->parentProperty() && property->propertyType() == QtVariantPropertyManager::groupTypeId() &&
+            property->propertyName() == propertyGroupName) {
             property->setEnabled(enabled);
         }
     }

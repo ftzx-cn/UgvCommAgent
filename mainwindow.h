@@ -55,7 +55,7 @@ class MainWindow : public QMainWindow {
     void setPlcConnectionParameter() const;
     void handleModbusMessageReceived(quint64 requestId, const QModbusDataUnit &data, bool success,
                                      const QString &errorMsg, quint32 userData) const;
-    void setPropertiesEnabled(bool enabled) const;
+    void setPropertiesEnabled(const QString &propertyGroupName, bool enabled) const;
 
     struct AiScaleRange {
         int min;
@@ -86,6 +86,9 @@ class MainWindow : public QMainWindow {
     QTextEdit *m_logView{nullptr};
 
     std::shared_ptr<spdlog::sinks::qt_color_sink_mt> m_logview_sink;
+
+    bool m_isConnectedPlc{false};
+    bool m_isConnectedWebSocket{false};
 };
 
 #endif // UGVCOMMAGENT_MAINWINDOW_H
