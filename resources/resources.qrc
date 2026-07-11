@@ -1,0 +1,11 @@
+<RCC>
+    <qresource prefix="/">
+        <file>icons/批量启动.svg</file>
+        <file>icons/批量停止.svg</file>
+        <file>icons/批量刷新.svg</file>
+        <file>icons/正在连接.svg</file>
+        <file>icons/主机异常.svg</file>
+        <file>icons/主机正常.svg</file>
+        <file>icons/保存.svg</file>
+    </qresource>
+</RCC>
