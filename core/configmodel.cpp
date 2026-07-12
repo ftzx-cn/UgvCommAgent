@@ -71,7 +71,6 @@ QtVariantProperty *ConfigModel::createProperty(const QString &srcPropName, const
         }
         const auto group = groupPropertyByPath(groupPath);
         property = m_propertyManager->addProperty(QMetaType::QString, uiName);
-        property->setAttribute("groupPath", groupPath);
         if (regExp.isValid()) {
             property->setAttribute("regExp", regExp);
         }
@@ -81,7 +80,6 @@ QtVariantProperty *ConfigModel::createProperty(const QString &srcPropName, const
     } else if (type == "int") {
         const auto group = groupPropertyByPath(groupPath);
         property = m_propertyManager->addProperty(QMetaType::Int, uiName);
-        property->setAttribute("groupPath", groupPath);
         int minVal{0};
         int maxVal{0};
         bool hasMin = false;
@@ -127,7 +125,6 @@ QtVariantProperty *ConfigModel::createProperty(const QString &srcPropName, const
         if (!enumNames.empty()) {
             const auto group = groupPropertyByPath(groupPath);
             property = m_propertyManager->addProperty(QtVariantPropertyManager::enumTypeId(), uiName);
-            property->setAttribute("groupPath", groupPath);
             property->setAttribute("enumNames", enumNames);
             property->setAttribute("minimum", 0);
             property->setAttribute("maximum", enumNames.size() - 1);
@@ -137,13 +134,6 @@ QtVariantProperty *ConfigModel::createProperty(const QString &srcPropName, const
         }
     }
     return property;
-}
-
-void ConfigModel::loadPropetyItems() {
-    for (const auto &propName : m_propertyToName) {
-        std::string pName = propName.toStdString();
-        onSrcValueChanged(propName, m_configSource->property(pName.data()));
-    }
 }
 
 void ConfigModel::onSrcValueChanged(const QString &propName, const QVariant &propValue) const {
@@ -165,26 +155,6 @@ void ConfigModel::onSrcValueChanged(const QString &propName, const QVariant &pro
             property->setModified(false);
         } else {
             spdlog::critical(propName.toStdString() + "属性同步错误!");
-        }
-    }
-}
-
-void ConfigModel::savePropetyItems() {
-    if (!m_configSource) {
-        return;
-    }
-    for (const auto &property : m_nameToProperty) {
-        if (isValidItem(property, property->value())) {
-            m_configSource->setProperty(m_propertyToName.value(property).toStdString().data(), property->value());
-            property->setModified(false);
-        } else {
-            if (isValidItem(property,
-                            m_configSource->property(m_propertyToName.value(property).toStdString().data()))) {
-                property->setValue(m_configSource->property(m_propertyToName.value(property).toStdString().data()));
-                property->setModified(false);
-            } else {
-                spdlog::critical(m_propertyToName.value(property).toStdString() + "属性同步错误!");
-            }
         }
     }
 }
@@ -219,7 +189,6 @@ QtVariantProperty *ConfigModel::groupPropertyByPath(const QString &groupName) {
             parent = existing;
         } else {
             auto *group = m_propertyManager->addProperty(QtVariantPropertyManager::groupTypeId(), part);
-            group->setAttribute("groupPath", path);
             if (parent) {
                 parent->addSubProperty(group);
             }

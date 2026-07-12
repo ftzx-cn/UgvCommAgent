@@ -1,4 +1,7 @@
 #include "websocketclient.h"
+
+#include "spdlog/spdlog.h"
+
 #include <QDebug>
 #include <QJsonDocument>
 
@@ -28,7 +31,7 @@ void WebSocketClient::connectToServer(const QString &url) {
 
 void WebSocketClient::disconnectFromServer() const {
     m_reconnectTimer->stop();
-    if (m_webSocket->state() == QAbstractSocket::ConnectedState) {
+    if (m_webSocket->state() != QAbstractSocket::UnconnectedState) {
         m_webSocket->close();
     }
 }
@@ -51,7 +54,7 @@ void WebSocketClient::onConnected() {
 
 void WebSocketClient::onDisconnected() {
     emit disconnected();
-    qDebug() << "WebSocket disconnected, will reconnect in" << m_reconnectIntervalMs << "ms";
+    spdlog::warn("WebSocket disconnected, will reconnect in " + std::to_string(m_reconnectIntervalMs)+ " ms");
     if (!m_reconnectTimer->isActive()) {
         m_reconnectTimer->start(m_reconnectIntervalMs);
     }
@@ -69,6 +72,6 @@ void WebSocketClient::onTextMessageReceived(const QString &message) {
 void WebSocketClient::onReconnectTimeout() const {
     if (m_serverUrl.isEmpty())
         return;
-    qDebug() << "Attempting to reconnect to" << m_serverUrl;
+    spdlog::info("重连WS服务器 - {}", m_serverUrl.toStdString());
     m_webSocket->open(QUrl(m_serverUrl));
 }

@@ -7,5 +7,9 @@
         <file>icons/主机异常.svg</file>
         <file>icons/主机正常.svg</file>
         <file>icons/保存.svg</file>
+        <file>icons/云同步-sync.svg</file>
+        <file>icons/云失败-fail.svg</file>
+        <file>icons/网络_异常-copy.svg</file>
+        <file>icons/网络_正常-copy.svg</file>
     </qresource>
 </RCC>

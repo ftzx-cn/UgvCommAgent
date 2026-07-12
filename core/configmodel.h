@@ -31,9 +31,6 @@ class ConfigModel : public QObject {
 
     void buildPropertyBinding();
 
-    void loadPropetyItems();
-    void savePropetyItems();
-
     bool equalValues(QtVariantProperty *property) const;
 
     void onSrcValueChanged(const QString &propName, const QVariant &propValue) const;

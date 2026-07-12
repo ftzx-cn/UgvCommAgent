@@ -10,12 +10,13 @@ class WebSocketClient : public QObject {
     Q_OBJECT
   public:
     explicit WebSocketClient(QObject *parent = nullptr);
-    ~WebSocketClient();
+    ~WebSocketClient() override;
 
     void connectToServer(const QString &url);
     void disconnectFromServer() const;
     void sendJson(const QJsonObject &json) const;
     [[nodiscard]] bool isConnected() const;
+    void setReconnectIntervalMs(const int ms) { m_reconnectIntervalMs = ms; }
 
   signals:
     void connected();
@@ -33,7 +34,7 @@ class WebSocketClient : public QObject {
     QWebSocket *m_webSocket;
     QTimer *m_reconnectTimer;
     QString m_serverUrl;
-    int m_reconnectIntervalMs = 3000;
+    int m_reconnectIntervalMs = 5000;
 };
 
 #endif // WEBSOCKETCLIENT_H

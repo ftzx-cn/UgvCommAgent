@@ -54,6 +54,7 @@ class ConfigSource : public QObject {
     Q_PROPERTY(
         QString deviceTankLevelRange MEMBER m_deviceTankLevelRange WRITE setDeviceTankLevelRange NOTIFY srcValueChanged)
     Q_PROPERTY(QString wsServerUrl MEMBER m_wsServerUrl WRITE setWsServerUrl NOTIFY srcValueChanged)
+    Q_PROPERTY(int wsReconnectIntervalMs MEMBER m_wsReconnectIntervalMs WRITE setWsReconnectIntervalMs NOTIFY srcValueChanged)
 
   public:
     explicit ConfigSource(QObject *parent = nullptr);
@@ -86,7 +87,7 @@ class ConfigSource : public QObject {
     void setDeviceAiScaleRange(const QString &range);
     void setDeviceTankLevelRange(const QString &range);
     void setWsServerUrl(const QString &url);
-
+    void setWsReconnectIntervalMs(int ms);
   signals:
     void srcValueChanged(const QString &proName, const QVariant &proValue); // 任意属性变化时发出
 
@@ -165,6 +166,10 @@ class ConfigSource : public QObject {
     QString m_wsServerUrl{};
     QString m_wsServerUrlInfo{
         R"({"id": 22, "groupPath": "WebSocket配置", "uiName": "服务器地址", "type": "string", "value": "ws:\/\/127.0.0.1:8080", "validator": {"regExp": "^wss?:\/\/.*"}})"};
+
+    int m_wsReconnectIntervalMs{};
+    QString m_wsReconnectIntervalMsInfo{
+        R"({"id": 23, "groupPath": "WebSocket配置", "uiName": "连接失败重连间隔", "type": "int", "value": 3000, "validator": {"min": 1}})"};
 
     // 辅助函数
     QHash<QString, QString> m_nameToInfoHash{};

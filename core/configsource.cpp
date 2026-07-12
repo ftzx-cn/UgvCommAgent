@@ -31,6 +31,7 @@ ConfigSource::ConfigSource(QObject *parent) : QObject(parent) {
     m_nameToInfoHash.insert("deviceAiScaleRange", m_deviceAiScaleRangeInfo);
     m_nameToInfoHash.insert("deviceTankLevelRange", m_deviceTankLevelRangeInfo);
     m_nameToInfoHash.insert("wsServerUrl", m_wsServerUrlInfo);
+    m_nameToInfoHash.insert("wsReconnectIntervalMs", m_wsReconnectIntervalMsInfo);
 }
 
 void ConfigSource::sortValidProperty() {
@@ -582,4 +583,12 @@ void ConfigSource::setWsServerUrl(const QString &url) {
     m_wsServerUrl = url;
     updatePropInfoValue("wsServerUrl", url);
     emit srcValueChanged("wsServerUrl", url);
+}
+void ConfigSource::setWsReconnectIntervalMs(const int ms) {
+    if (m_wsReconnectIntervalMs == ms) {
+        return;
+    }
+    m_wsReconnectIntervalMs = ms;
+    updatePropInfoValue("wsReconnectIntervalMs", ms);
+    emit srcValueChanged("wsReconnectIntervalMs", ms);
 }

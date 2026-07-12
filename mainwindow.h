@@ -57,6 +57,8 @@ class MainWindow : public QMainWindow {
                                      const QString &errorMsg, quint32 userData) const;
     void setPropertiesEnabled(const QString &propertyGroupName, bool enabled) const;
 
+    void handleWebSocketMessage(const QJsonObject &json);
+
     struct AiScaleRange {
         int min;
         int max;
@@ -74,9 +76,13 @@ class MainWindow : public QMainWindow {
     RobustModbusClient *m_robustModbusClient{nullptr};
 
     QToolBar *m_toolBar{nullptr};
-    QAction *m_connectAction{nullptr};
-    QAction *m_disconnectAction{nullptr};
-    QAction *m_refreshAction{nullptr};
+    QAction *m_connectPlcAction{nullptr};
+    QAction *m_disconnectPlcAction{nullptr};
+
+    QAction *m_connectWebSocketAction{nullptr};
+    QAction *m_disconnectWebSocketAction{nullptr};
+    QLabel *m_webSocketStatusIcon{nullptr};
+
     QAction *m_saveAction{nullptr};
     QLabel *m_plcStatusIcon{nullptr};
 
@@ -89,6 +95,8 @@ class MainWindow : public QMainWindow {
 
     bool m_isConnectedPlc{false};
     bool m_isConnectedWebSocket{false};
+
+    WebSocketClient *m_webSocketClient{nullptr};
 };
 
 #endif // UGVCOMMAGENT_MAINWINDOW_H

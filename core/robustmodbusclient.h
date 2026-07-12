@@ -67,8 +67,8 @@ class RobustModbusClient : public QObject {
     void cancelAllRequests();
 
     // ========== 状态查询 ==========
-    bool isRequestPending(quint64 requestId) const;
-    int pendingCount() const { return m_pendingQueue.size() + m_activeCount; }
+    [[nodiscard]] bool isRequestPending(quint64 requestId) const;
+    [[nodiscard]] int pendingCount() const { return static_cast<int>(m_pendingQueue.size()) + m_activeCount; }
 
   signals:
     // 单个请求完成（成功或失败），userData 透传
@@ -89,9 +89,9 @@ class RobustModbusClient : public QObject {
   private:
     // ========== 数据结构 ==========
     struct OriginalRequest {
-        QModbusDataUnit unit;
-        quint32 userData;
-        int serverId;
+        QModbusDataUnit unit{};
+        quint32 userData{};
+        int serverId{};
     };
 
     struct RequestContext {

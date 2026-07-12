@@ -10,7 +10,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
     connect(m_reconnectTimer, &QTimer::timeout, this, [this]() {
         const QString ip = m_configSource->property("plcIp").toString();
         const int port = m_configSource->property("plcPort").toInt();
-        spdlog::info("开始重连PLC - {}/{}", ip.toStdString(), QString::number(port).toStdString());
+        spdlog::info("重连PLC - {}/{}", ip.toStdString(), QString::number(port).toStdString());
         m_tcpClient->connectDevice();
     });
 
@@ -32,8 +32,8 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
 
     // 添加工具栏按钮
     m_toolBar->addSeparator();
-    m_connectAction = m_toolBar->addAction(QIcon(R"(:/icons/批量启动.svg)"), tr("连接PLC"));
-    m_disconnectAction = m_toolBar->addAction(QIcon(R"(:/icons/批量停止.svg)"), tr("断开PLC"));
+    m_connectPlcAction = m_toolBar->addAction(QIcon(R"(:/icons/批量启动.svg)"), tr("连接PLC"));
+    m_disconnectPlcAction = m_toolBar->addAction(QIcon(R"(:/icons/批量停止.svg)"), tr("断开PLC"));
 
     m_plcStatusIcon = new QLabel(m_toolBar);
     m_plcStatusIcon->setFixedWidth(48);
@@ -45,7 +45,14 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
     spacerFrame->setFixedWidth(16);
     m_toolBar->addWidget(spacerFrame);
 
-    m_refreshAction = m_toolBar->addAction(QIcon(R"(:/icons/批量刷新.svg)"), tr("刷新"));
+    m_connectWebSocketAction = m_toolBar->addAction(QIcon(R"(:/icons/云同步-sync.svg)"), tr("连接WS"));
+    m_disconnectWebSocketAction = m_toolBar->addAction(QIcon(R"(:/icons/云失败-fail.svg)"), tr("中断WS"));
+    m_webSocketStatusIcon = new QLabel(m_toolBar);
+    m_webSocketStatusIcon->setFixedWidth(48);
+    m_webSocketStatusIcon->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+    m_toolBar->addWidget(m_webSocketStatusIcon);
+    m_toolBar->addSeparator();
+
     m_saveAction = m_toolBar->addAction(QIcon(R"(:/icons/保存.svg)"), tr("保存设置"));
 
     m_toolBar->addSeparator();
@@ -125,6 +132,8 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
     m_configModel->setConfigSource(m_configSource);
     m_configModel->buildPropertyBinding();
 
+    rootLayout->addWidget(configContainer);
+
     for (const auto &property : m_configModel->properties()) {
         if (property->propertyType() != QtVariantPropertyManager::groupTypeId()) {
             if (!property->parentProperty()) {
@@ -142,31 +151,14 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
         }
     }
 
-    // 添加修改设置按钮
-    // const auto settingButtonsContainer = new QFrame(configContainer);
-    // const auto settingButtonsLayout = new QHBoxLayout(settingButtonsContainer);
-    // settingButtonsLayout->setAlignment(Qt::AlignRight);
-    // settingButtonsLayout->setContentsMargins(0, 0, 0, 0);
-    // settingButtonsLayout->setSpacing(6);
-    // const auto saveButton = new QPushButton(tr("应用"), settingButtonsContainer);
-    // const auto loadButton = new QPushButton(tr("恢复"), settingButtonsContainer);
-    // settingButtonsLayout->addStretch();
-    // settingButtonsLayout->addWidget(saveButton);
-    // settingButtonsLayout->addWidget(loadButton);
-    // configContainerLayout->addWidget(settingButtonsContainer);
-
-    rootLayout->addWidget(configContainer);
-
-    // connect(saveButton, &QPushButton::clicked, m_configModel, &ConfigModel::savePropetyItems);
-    // connect(loadButton, &QPushButton::clicked, m_configModel, &ConfigModel::loadPropetyItems);
-
     connect(m_propertyManager, &QtVariantPropertyManager::valueChanged,
             [this](QtProperty *prop, const QVariant &value) {
                 const auto property = dynamic_cast<QtVariantProperty *>(prop);
-                if (property) {
-                    m_configModel->updateSourceProperty(property, value);
+                if (!property) {
+                    return;
                 }
-                if (property && m_configModel->equalValues(property)) {
+                m_configModel->updateSourceProperty(property, value);
+                if (m_configModel->equalValues(property)) {
                     prop->setModified(false);
                 } else {
                     prop->setModified(true);
@@ -176,14 +168,12 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
     connect(m_saveAction, &QAction::triggered, [this]() { m_configSource->saveToFile(); });
 
     // 启动PLC连接
-    connect(m_connectAction, &QAction::triggered, [this]() {
-        if (!m_connectAction->isEnabled() && m_disconnectAction->isEnabled()) {
+    connect(m_connectPlcAction, &QAction::triggered, [this]() {
+        if (!m_connectPlcAction->isEnabled() && m_disconnectPlcAction->isEnabled()) {
             return;
         }
-        m_connectAction->setEnabled(false);
-        m_disconnectAction->setEnabled(true);
-        // saveButton->setEnabled(false);
-        // loadButton->setEnabled(false);
+        m_connectPlcAction->setEnabled(false);
+        m_disconnectPlcAction->setEnabled(true);
         setPropertiesEnabled("PLC连接配置", false);
         setPropertiesEnabled("设备监控配置", false);
 
@@ -214,8 +204,8 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
         emit m_tcpClient->stateChanged(m_tcpClient->state());
     });
     // 断开PLC连接
-    connect(m_disconnectAction, &QAction::triggered, [this]() {
-        if (m_connectAction->isEnabled() && !m_disconnectAction->isEnabled()) {
+    connect(m_disconnectPlcAction, &QAction::triggered, [this]() {
+        if (m_connectPlcAction->isEnabled() && !m_disconnectPlcAction->isEnabled()) {
             return;
         }
 
@@ -223,10 +213,8 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
             m_reconnectTimer->stop();
         }
 
-        m_connectAction->setEnabled(true);
-        m_disconnectAction->setEnabled(false);
-        // saveButton->setEnabled(true);
-        // loadButton->setEnabled(true);
+        m_connectPlcAction->setEnabled(true);
+        m_disconnectPlcAction->setEnabled(false);
         setPropertiesEnabled("PLC连接配置", true);
         setPropertiesEnabled("设备监控配置", true);
 
@@ -249,7 +237,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
                 if (m_reconnectTimer->isActive()) {
                     m_reconnectTimer->stop();
                 }
-                if (!m_connectAction->isEnabled() && m_disconnectAction->isEnabled()) {
+                if (!m_connectPlcAction->isEnabled() && m_disconnectPlcAction->isEnabled()) {
                     spdlog::info("成功连接PLC - {}/{},开始轮询", ip.toStdString(), QString::number(port).toStdString());
                     m_robustModbusClient->startPolling(pollingIntervalMs);
                 } else {
@@ -260,7 +248,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
                 break;
             case QModbusDevice::UnconnectedState:
                 m_plcStatusIcon->setPixmap(QIcon(R"(:/icons/主机异常.svg)").pixmap(QSize(30, 30)));
-                if (!m_connectAction->isEnabled() && m_disconnectAction->isEnabled()) {
+                if (!m_connectPlcAction->isEnabled() && m_disconnectPlcAction->isEnabled()) {
                     if (!m_reconnectTimer->isActive()) {
                         if (connectSession.sessionId == 0) {
                             spdlog::info("开始连接PLC - {}/{}", ip.toStdString(), QString::number(port).toStdString());
@@ -367,7 +355,36 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
     });
 
     emit m_pump->remoteStateChanaged(m_pump->remoteState());
-    emit m_connectAction->trigger();
+    emit m_connectPlcAction->trigger();
+
+    m_webSocketClient = new WebSocketClient(this);
+    connect(m_webSocketClient, &WebSocketClient::textMessageReceived, this, &MainWindow::handleWebSocketMessage);
+    connect(m_webSocketClient, &WebSocketClient::connected, []() { spdlog::info("WebSocket 已连接"); });
+    connect(m_webSocketClient, &WebSocketClient::disconnected, []() { spdlog::warn("WebSocket 断开，等待重连"); });
+
+    connect(m_connectWebSocketAction, &QAction::triggered, [this]() {
+        const QString wsUrl = m_configSource->property("wsServerUrl").toString();
+        const int reconnectInterval = m_configSource->property("wsReconnectIntervalMs").toInt();
+        m_webSocketClient->setReconnectIntervalMs(reconnectInterval);
+        m_connectWebSocketAction->setEnabled(false);
+        m_disconnectWebSocketAction->setEnabled(true);
+        setPropertiesEnabled("WebSocket配置", false);
+        m_webSocketClient->connectToServer(wsUrl);
+        spdlog::info("开始连接WS服务器 - {}", wsUrl.toStdString());
+    });
+
+    connect(m_disconnectWebSocketAction, &QAction::triggered, [this]() {
+        const QString wsUrl = m_configSource->property("wsServerUrl").toString();
+        spdlog::info("断开WS服务器 - {}", wsUrl.toStdString());
+        m_connectWebSocketAction->setEnabled(true);
+        m_disconnectWebSocketAction->setEnabled(false);
+        setPropertiesEnabled("WebSocket配置", true);
+        if (m_webSocketClient) {
+            m_webSocketClient->disconnectFromServer();
+        }
+    });
+
+    emit m_connectWebSocketAction->trigger();
 }
 
 MainWindow::~MainWindow() {
@@ -384,6 +401,10 @@ MainWindow::~MainWindow() {
 
     if (m_tcpClient) {
         m_tcpClient->disconnectDevice();
+    }
+
+    if (m_webSocketClient) {
+        m_webSocketClient->disconnectFromServer();
     }
 
     if (const auto logger = spdlog::default_logger()) {
@@ -510,6 +531,7 @@ void MainWindow::setPropertiesEnabled(const QString &propertyGroupName, const bo
         }
     }
 }
+void MainWindow::handleWebSocketMessage(const QJsonObject &json) {}
 
 void MainWindow::setReadTasks() const {
 
