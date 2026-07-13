@@ -359,8 +359,14 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
 
     m_webSocketClient = new WebSocketClient(this);
     connect(m_webSocketClient, &WebSocketClient::textMessageReceived, this, &MainWindow::handleWebSocketMessage);
-    connect(m_webSocketClient, &WebSocketClient::connected, []() { spdlog::info("WebSocket 已连接"); });
-    connect(m_webSocketClient, &WebSocketClient::disconnected, []() { spdlog::warn("WebSocket 断开"); });
+    connect(m_webSocketClient, &WebSocketClient::connected, [this]() {
+        m_webSocketStatusIcon->setPixmap(QIcon(R"(:/icons/网络_正常-copy.svg)").pixmap(QSize(28, 28)));
+        spdlog::info("WebSocket 已连接");
+    });
+    connect(m_webSocketClient, &WebSocketClient::disconnected, [this]() {
+        m_webSocketStatusIcon->setPixmap(QIcon(R"(:/icons/网络_异常-copy.svg)").pixmap(QSize(28, 28)));
+        spdlog::warn("WebSocket 断开");
+    });
 
     connect(m_connectWebSocketAction, &QAction::triggered, [this]() {
         const QString wsUrl = m_configSource->property("wsServerUrl").toString();
