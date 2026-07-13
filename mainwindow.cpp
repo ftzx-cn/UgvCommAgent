@@ -360,7 +360,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
     m_webSocketClient = new WebSocketClient(this);
     connect(m_webSocketClient, &WebSocketClient::textMessageReceived, this, &MainWindow::handleWebSocketMessage);
     connect(m_webSocketClient, &WebSocketClient::connected, []() { spdlog::info("WebSocket 已连接"); });
-    connect(m_webSocketClient, &WebSocketClient::disconnected, []() { spdlog::warn("WebSocket 断开，等待重连"); });
+    connect(m_webSocketClient, &WebSocketClient::disconnected, []() { spdlog::warn("WebSocket 断开"); });
 
     connect(m_connectWebSocketAction, &QAction::triggered, [this]() {
         const QString wsUrl = m_configSource->property("wsServerUrl").toString();
@@ -472,6 +472,11 @@ void MainWindow::handleModbusMessageReceived(quint64 requestId, const QModbusDat
                 }
                 const auto remote = data.value(0) ? PumpWidget::RemoteState::Remote : PumpWidget::RemoteState::Local;
                 m_pump->setRemoteState(remote);
+
+                QJsonObject json;
+                json["name"] = "PumpRemoteState";
+                json["value"] = remote; // 假设每个点位读1个寄存器
+                m_webSocketClient->sendJson(json);
             }
             break;
         case 2:
@@ -491,6 +496,11 @@ void MainWindow::handleModbusMessageReceived(quint64 requestId, const QModbusDat
                 const auto runningState =
                     data.value(0) ? PumpWidget::RunningState::Running : PumpWidget::RunningState::Stopped;
                 m_pump->setRunningState(runningState);
+
+                QJsonObject json;
+                json["name"] = "PumpRunningState";
+                json["value"] = runningState; // 假设每个点位读1个寄存器
+                m_webSocketClient->sendJson(json);
             }
             break;
         case 3:
@@ -512,6 +522,11 @@ void MainWindow::handleModbusMessageReceived(quint64 requestId, const QModbusDat
                 const double per = (value - static_cast<double>(m_aiScaleRange.min)) /
                                    static_cast<double>(m_aiScaleRange.max - m_aiScaleRange.min) * 100;
                 m_tank->setPercentage(per);
+
+                QJsonObject json;
+                json["name"] = "PumpRunningState";
+                json["value"] = per; // 假设每个点位读1个寄存器
+                m_webSocketClient->sendJson(json);
             }
             break;
         case 10:
@@ -531,7 +546,20 @@ void MainWindow::setPropertiesEnabled(const QString &propertyGroupName, const bo
         }
     }
 }
-void MainWindow::handleWebSocketMessage(const QJsonObject &json) {}
+void MainWindow::handleWebSocketMessage(const QJsonObject &json) {
+    QString action = json["action"].toString();
+    if (action == "write") {
+        int addr = json["addr"].toInt();
+        int value = json["value"].toInt();
+        int serverId = json.value("serverId").toInt(1);
+        // 根据功能码选择写线圈或寄存器
+        // 这里默认写保持寄存器，可以根据需求扩展
+        m_robustModbusClient->writeHoldingRegister(addr, static_cast<quint16>(value), serverId, 10);
+        spdlog::info("WebSocket 写指令: addr={}, value={}", addr, value);
+    } else {
+        qWarning() << "Unknown WebSocket action:" << action;
+    }
+}
 
 void MainWindow::setReadTasks() const {
 

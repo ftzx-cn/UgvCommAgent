@@ -25,13 +25,15 @@ void WebSocketClient::connectToServer(const QString &url) {
     if (m_webSocket->state() == QAbstractSocket::ConnectedState) {
         m_webSocket->close();
     }
+    m_manualDisconnect = false;
     m_reconnectTimer->stop();
     m_webSocket->open(QUrl(url));
 }
 
-void WebSocketClient::disconnectFromServer() const {
+void WebSocketClient::disconnectFromServer() {
+    m_manualDisconnect = true;
     m_reconnectTimer->stop();
-    if (m_webSocket->state() != QAbstractSocket::UnconnectedState) {
+    if (m_webSocket->state() == QAbstractSocket::ConnectedState) {
         m_webSocket->close();
     }
 }
@@ -47,6 +49,7 @@ bool WebSocketClient::isConnected() const { return m_webSocket->state() == QAbst
 
 // ---------- slots ----------
 void WebSocketClient::onConnected() {
+    m_manualDisconnect = false;
     m_reconnectTimer->stop();
     emit connected();
     qDebug() << "WebSocket connected to" << m_serverUrl;
@@ -54,9 +57,16 @@ void WebSocketClient::onConnected() {
 
 void WebSocketClient::onDisconnected() {
     emit disconnected();
-    spdlog::warn("WebSocket disconnected, will reconnect in " + std::to_string(m_reconnectIntervalMs)+ " ms");
-    if (!m_reconnectTimer->isActive()) {
-        m_reconnectTimer->start(m_reconnectIntervalMs);
+    if (!m_manualDisconnect) {
+        // 意外断开：启动重连
+        spdlog::warn("WebSocket disconnected, will reconnect in " + std::to_string(m_reconnectIntervalMs)+ " ms");
+        if (!m_reconnectTimer->isActive()) {
+            m_reconnectTimer->start(m_reconnectIntervalMs);
+        }
+    } else {
+        // 主动断开：不重连，并复位标志
+        qDebug() << "WebSocket manually disconnected, no reconnect";
+        m_manualDisconnect = false;
     }
 }
 
